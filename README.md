@@ -1,3 +1,5 @@
+[![Tests](https://github.com/MattConce/goqueryx/actions/workflows/tests.yml/badge.svg)](https://github.com/MattConce/goqueryx/actions)
+
 # goqueryx
 
 A lightweight, ORM-free SQL query builder for Go. Designed for simplicity and compatibility with `database/sql` and libraries like `sqlx`.
