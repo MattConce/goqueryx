@@ -4,8 +4,6 @@
 
 A lightweight, ORM-free SQL query builder for Go. Designed for simplicity and compatibility with `database/sql` and libraries like `sqlx`.
 
-**No magic** – just straightforward SQL construction.
-
 ## Features
 
 - 🛠️ **Simple API**: Chainable methods for building SQL queries
@@ -16,22 +14,19 @@ A lightweight, ORM-free SQL query builder for Go. Designed for simplicity and co
 ## Installation
 
 ```bash
-go get github.com/MattConce/goqueryx
+go get github.com/MattConce/goqueryx/builder
 ```
-
-## Why goqueryx?
-
-Avoid ORM Complexity: Perfect for projects that prefer direct SQL control
-
-Type-Safe Arguments: []any args work with all major SQL drivers
-
-Transparent Queries: See exactly what SQL is being generated
 
 ## Usage with sqlx (Recommended)
 
 ```go
 
-db := sqlx.MustConnect("mysql", "user=test dbname=test")
+type User struct {
+    Id   `db:"id"`
+    Name `db:"name"`
+}
+
+db := sqlx.MustConnect("mysql", "")
 
 qb := builder.New().
     Select("id", "name").
