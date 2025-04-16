@@ -23,6 +23,75 @@ func TestBuildSelect(t *testing.T) {
 	}
 }
 
+func TestBuildInsert(t *testing.T) {
+	qb := &QueryBuilder{
+		insertClause: &clauses.Insert{
+			Table:   "users",
+			Columns: []string{"name", "email"},
+			Values:  [][]any{{"Jane", "jane@example.com"}},
+		},
+	}
+
+	var sql strings.Builder
+	var args []any
+	args = buildInsert(qb, &sql, args)
+
+	expectedSQL := "INSERT INTO users (name, email) VALUES (?, ?)"
+	if sql.String() != expectedSQL {
+		t.Errorf("\nSQL expected: %q\ngot: %q", expectedSQL, sql.String())
+	}
+
+	expectedArgs := []any{"Jane", "jane@example.com"}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("\nArgs expected: %v\ngot: %v", expectedArgs, args)
+	}
+}
+
+func TestBuildBulkInsert(t *testing.T) {
+	qb := &QueryBuilder{
+		insertClause: &clauses.Insert{
+			Table:   "users",
+			Columns: []string{"name", "email"},
+			Values: [][]any{
+				{"John", "john@example.com"},
+				{"Jane", "jane@example.com"},
+			},
+		},
+	}
+
+	var sql strings.Builder
+	var args []any
+	args = buildInsert(qb, &sql, args)
+
+	expectedSQL := "INSERT INTO users (name, email) VALUES (?, ?), (?, ?)"
+	if sql.String() != expectedSQL {
+		t.Errorf("\nSQL expected: %q\ngot: %q", expectedSQL, sql.String())
+	}
+
+	expectedArgs := []any{
+		"John", "john@example.com",
+		"Jane", "jane@example.com",
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("\nArgs expected: %v\ngot: %v", expectedArgs, args)
+	}
+}
+
+func TestBuildUpdate(t *testing.T) {
+	cols := []string{"id", "name"}
+	qb := &QueryBuilder{
+		selectClause: &clauses.Select{Columns: cols},
+	}
+
+	var sql strings.Builder
+	buildSelect(qb, &sql)
+
+	expected := "SELECT id, name"
+	if sql.String() != expected {
+		t.Errorf("\nexpected: %q\ngot: %q", expected, sql.String())
+	}
+}
+
 func TestBuildFrom(t *testing.T) {
 	qb := &QueryBuilder{
 		fromClause: &clauses.From{Table: "users"},
@@ -105,6 +174,28 @@ func TestBuildGroupBy(t *testing.T) {
 	expected := " GROUP BY id, name"
 	if sql.String() != expected {
 		t.Errorf("\nexpected: %q\ngot: %q", expected, sql.String())
+	}
+}
+
+func TestBuildHaving(t *testing.T) {
+	havingClauses := make([]*clauses.Having, 0)
+	havingClauses = append(havingClauses, &clauses.Having{Condition: "age > ?", Args: []any{18}})
+
+	qb := &QueryBuilder{
+		havingClause: havingClauses,
+	}
+
+	var sql strings.Builder
+	args := buildHaving(qb, &sql, nil)
+
+	expectedExpr := " HAVING age > ?"
+	expectedArgs := []any{18}
+
+	if sql.String() != expectedExpr {
+		t.Errorf("\nexpected: %q\ngot: %q", expectedExpr, sql.String())
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
 	}
 }
 

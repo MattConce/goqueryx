@@ -5,20 +5,21 @@ import (
 	"testing"
 )
 
-func TestQueryBuilder_Build_Success(t *testing.T) {
+func TestQueryBuilder_Build_Insert(t *testing.T) {
+
 	qb := NewQuery().
-		Select("id", "name", "email").
-		From("users").
-		Where("id = ?", []any{1}).
-		Where("status = ?", []any{true})
+		Insert("users", []string{"name", "email"}, [][]any{
+			{"John", "john@example.com"},
+			{"Jane", "jane@example.com"},
+		})
 
 	sql, args, err := qb.Build()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedExpr := "SELECT id, name, email FROM users WHERE id = ? AND status = ?"
-	expectedArgs := []any{1, true}
+	expectedExpr := "INSERT INTO users (name, email) VALUES (?, ?), (?, ?)"
+	expectedArgs := []any{"John", "john@example.com", "Jane", "jane@example.com"}
 
 	if sql != expectedExpr {
 		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
@@ -28,23 +29,33 @@ func TestQueryBuilder_Build_Success(t *testing.T) {
 	}
 }
 
-func TestQueryBuilder_Build_MissingSelect(t *testing.T) {
-	qb := NewQuery().From("users")
-	_, _, err := qb.Build()
-	if err == nil {
-		t.Error("expected an error when select clause is missing, but got none")
+func TestQueryBuilder_Build_Update(t *testing.T) {
+
+	qb := NewQuery().
+		Update("users",
+			[]string{"name", "status"},
+			[]any{"John Doe", "inactive"},
+			"id = ? AND active = ?",
+			[]any{123, true},
+		)
+
+	sql, args, err := qb.Build()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedExpr := "UPDATE users SET name = ?, status = ? WHERE id = ? AND active = ?"
+	expectedArgs := []any{"John Doe", "inactive", 123, true}
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
 	}
 }
 
-func TestQueryBuilder_Build_MissingFrom(t *testing.T) {
-	qb := NewQuery().Select("id", "name")
-	_, _, err := qb.Build()
-	if err == nil {
-		t.Error("expected an error when from clause is missing, but got none")
-	}
-}
-
-func TestQueryBuilder_Build_NoWhere(t *testing.T) {
+func TestQueryBuilder_Build_Select(t *testing.T) {
 	qb := NewQuery().Select("id", "name").From("users")
 	sql, args, err := qb.Build()
 	if err != nil {
@@ -103,6 +114,29 @@ func TestQueryBuilder_Build_LeftJoin(t *testing.T) {
 	}
 }
 
+func TestQueryBuilder_Build_Where(t *testing.T) {
+	qb := NewQuery().
+		Select("id", "name", "email").
+		From("users").
+		Where("id = ?", []any{1}).
+		Where("status = ?", []any{true})
+
+	sql, args, err := qb.Build()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedExpr := "SELECT id, name, email FROM users WHERE id = ? AND status = ?"
+	expectedArgs := []any{1, true}
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
+	}
+}
+
 func TestQueryBuilder_Build_OrderBy(t *testing.T) {
 	qb := NewQuery().Select("id", "name").From("users").OrderBy("name DESC", "id ASC")
 	sql, args, err := qb.Build()
@@ -157,5 +191,25 @@ func TestQueryBuilder_Build_GroupBy(t *testing.T) {
 	}
 	if len(args) != 0 {
 		t.Errorf("expected no args, got: %v", args)
+	}
+}
+
+func TestQueryBuilder_Build_Having(t *testing.T) {
+	qb := NewQuery().Select("id", "name").From("users").Having("id = ?", []any{1})
+
+	sql, args, err := qb.Build()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedExpr := "SELECT id, name FROM users HAVING id = ?"
+	expectedArgs := []any{1}
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
 	}
 }

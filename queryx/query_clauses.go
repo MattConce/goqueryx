@@ -55,6 +55,22 @@ func buildGroupBy(qb *QueryBuilder, b *strings.Builder, args []any) []any {
 	return args
 }
 
+func buildHaving(qb *QueryBuilder, b *strings.Builder, args []any) []any {
+	if len(qb.havingClause) == 0 {
+		return args
+	}
+
+	conditions := make([]string, 0, len(qb.havingClause))
+	for _, w := range qb.havingClause {
+		conditions = append(conditions, w.Condition)
+		args = append(args, w.Args...)
+	}
+
+	b.WriteString(" HAVING ")
+	b.WriteString(strings.Join(conditions, " AND "))
+	return args
+}
+
 func buildLimt(qb *QueryBuilder, b *strings.Builder, args []any) []any {
 	if qb.limitClause != nil {
 		b.WriteString(" LIMIT ?")
@@ -75,6 +91,47 @@ func buildOrderBy(qb *QueryBuilder, b *strings.Builder, args []any) []any {
 	if qb.orderByClause != nil {
 		b.WriteString(" ORDER BY ")
 		b.WriteString(strings.Join(qb.orderByClause.Columns, ", "))
+	}
+	return args
+}
+
+func buildInsert(qb *QueryBuilder, b *strings.Builder, args []any) []any {
+	if qb.insertClause != nil {
+		clause := qb.insertClause
+		b.WriteString(fmt.Sprintf("INSERT INTO %s (%s) VALUES ",
+			clause.Table,
+			strings.Join(clause.Columns, ", ")))
+
+		placeholders := make([]string, 0, len(clause.Values))
+		for _, row := range clause.Values {
+			placeholders = append(placeholders,
+				fmt.Sprintf("(%s)", strings.TrimSuffix(strings.Repeat("?, ", len(row)), ", ")))
+			args = append(args, row...)
+		}
+
+		b.WriteString(strings.Join(placeholders, ", "))
+	}
+	return args
+}
+
+func buildUpdate(qb *QueryBuilder, b *strings.Builder, args []any) []any {
+	if qb.updateClause != nil {
+		clause := qb.updateClause
+
+		b.WriteString(fmt.Sprintf("UPDATE %s SET ", clause.Table))
+
+		setClauses := make([]string, len(clause.Columns))
+		for i, col := range clause.Columns {
+			setClauses[i] = fmt.Sprintf("%s = ?", col)
+		}
+		b.WriteString(strings.Join(setClauses, ", "))
+
+		args = append(args, clause.Values...)
+
+		if clause.Where != "" {
+			b.WriteString(" WHERE " + clause.Where)
+			args = append(args, clause.WhereArgs...)
+		}
 	}
 	return args
 }

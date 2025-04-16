@@ -19,8 +19,11 @@ import (
 
 type QueryBuilder struct {
 	selectClause  *clauses.Select
+	insertClause  *clauses.Insert
+	updateClause  *clauses.Update
 	fromClause    *clauses.From
 	whereClause   []*clauses.Where
+	havingClause  []*clauses.Having
 	joinClause    []*clauses.Join
 	orderByClause *clauses.OrderBy
 	groupByClause *clauses.GroupBy
@@ -30,6 +33,16 @@ type QueryBuilder struct {
 
 func NewQuery() *QueryBuilder {
 	return &QueryBuilder{}
+}
+
+func (qb *QueryBuilder) Insert(table string, columns []string, values [][]any) *QueryBuilder {
+	qb.insertClause = clauses.NewInsert(table, columns, values)
+	return qb
+}
+
+func (qb *QueryBuilder) Update(table string, columns []string, values []any, where string, whereArgs []any) *QueryBuilder {
+	qb.updateClause = clauses.NewUpdate(table, columns, values, where, whereArgs)
+	return qb
 }
 
 func (qb *QueryBuilder) Select(columns ...string) *QueryBuilder {
@@ -49,6 +62,11 @@ func (qb *QueryBuilder) Where(condition string, args []any) *QueryBuilder {
 
 func (qb *QueryBuilder) GroupBy(columns ...string) *QueryBuilder {
 	qb.groupByClause = clauses.NewGroupBy(columns...)
+	return qb
+}
+
+func (qb *QueryBuilder) Having(condition string, args []any) *QueryBuilder {
+	qb.havingClause = append(qb.havingClause, clauses.NewHaving(condition, args))
 	return qb
 }
 
@@ -78,25 +96,54 @@ func (qb *QueryBuilder) LeftJoin(table, condition string, args []any) *QueryBuil
 }
 
 func (qb *QueryBuilder) Build() (string, []any, error) {
-	if qb.selectClause == nil || len(qb.selectClause.Columns) == 0 {
-		return "", nil, errors.New("select clause is required and must have columns")
-	}
-	if qb.fromClause == nil || qb.fromClause.Table == "" {
-		return "", nil, errors.New("from clause is required and table cannot be empty")
-	}
-
 	var sqlBuilder strings.Builder
 	var args []any
 
-	buildSelect(qb, &sqlBuilder)
-	buildFrom(qb, &sqlBuilder)
+	switch {
+	case qb.insertClause != nil:
+		if qb.insertClause.Table == "" {
+			return "", nil, errors.New("insert requires a table name")
+		}
+		if len(qb.insertClause.Columns) == 0 {
+			return "", nil, errors.New("insert requires columns")
+		}
+		if len(qb.insertClause.Values) == 0 {
+			return "", nil, errors.New("insert requires values")
+		}
+		args = buildInsert(qb, &sqlBuilder, args)
 
-	args = buildJoins(qb, &sqlBuilder, args)
-	args = buildWhere(qb, &sqlBuilder, args)
-	args = buildGroupBy(qb, &sqlBuilder, args)
-	args = buildOrderBy(qb, &sqlBuilder, args)
-	args = buildLimt(qb, &sqlBuilder, args)
-	args = buildOffset(qb, &sqlBuilder, args)
+	case qb.updateClause != nil:
+		if qb.updateClause.Table == "" {
+			return "", nil, errors.New("update requires a table name")
+		}
+		if len(qb.updateClause.Columns) == 0 {
+			return "", nil, errors.New("update requires columns")
+		}
+		if len(qb.updateClause.Values) != len(qb.updateClause.Columns) {
+			return "", nil, errors.New("number of values must match columns in update")
+		}
+		args = buildUpdate(qb, &sqlBuilder, args)
+
+	case qb.selectClause != nil:
+		if len(qb.selectClause.Columns) == 0 {
+			return "", nil, errors.New("select clause requires columns")
+		}
+		if qb.fromClause == nil || qb.fromClause.Table == "" {
+			return "", nil, errors.New("from clause is required for select")
+		}
+		buildSelect(qb, &sqlBuilder)
+		buildFrom(qb, &sqlBuilder)
+		args = buildJoins(qb, &sqlBuilder, args)
+		args = buildWhere(qb, &sqlBuilder, args)
+		args = buildGroupBy(qb, &sqlBuilder, args)
+		args = buildHaving(qb, &sqlBuilder, args)
+		args = buildOrderBy(qb, &sqlBuilder, args)
+		args = buildLimt(qb, &sqlBuilder, args)
+		args = buildOffset(qb, &sqlBuilder, args)
+
+	default:
+		return "", nil, errors.New("no query type specified (select/insert/update)")
+	}
 
 	return sqlBuilder.String(), args, nil
 }
