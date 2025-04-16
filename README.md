@@ -30,33 +30,24 @@ Transparent Queries: See exactly what SQL is being generated
 ## Usage with sqlx (Recommended)
 
 ```go
-package main
 
-import (
-"fmt"
-"github.com/jmoiron/sqlx"
-"github.com/your-username/your-repo/builder"
-)
+db := sqlx.MustConnect("mysql", "user=test dbname=test")
 
-func main() {
-db := sqlx.MustConnect("postgres", "user=test dbname=test")
+qb := builder.New().
+    Select("id", "name").
+    From("users").
+    Where("active = ?", []any{true})
 
-    qb := builder.New().
-        Select("id", "name").
-        From("users").
-        Where("active = ?", []any{true})
+sql, args, _ := qb.Build()
+sql = db.Rebind(sql)
 
-    sql, args, _ := qb.Build()
-    sql = db.Rebind(sql)
+var users []User
 
-    var users []User
-
-    err := db.Select(&users, sql, args...)
-    if err != nil {
-        panic(err)
-    }
-
+err := db.Select(&users, sql, args...)
+if err != nil {
+    panic(err)
 }
+
 ```
 
 ## Basic Usage
