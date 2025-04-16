@@ -6,10 +6,10 @@ A lightweight, ORM-free SQL query builder for Go. Designed for simplicity and co
 
 ## Features
 
-- 🛠️ **Simple API**: Chainable methods for building SQL queries
-- 🚫 **Zero ORM Dependencies**: Use raw SQL with your preferred driver (`pgx`, `sqlx`, `database/sql`, etc.)
-- 🛡️ **SQL Injection Protection**: Parameterized arguments
-- 📦 **Minimalist**: Pure GO, no external dependencies
+- **Simple API**: Chainable methods for building SQL queries
+- **Zero ORM Dependencies**: Use raw SQL with your preferred driver (`pgx`, `sqlx`, `database/sql`, etc.)
+- **SQL Injection Protection**: Parameterized arguments
+- **Minimalist**: Pure GO, no external dependencies
 
 ## Installation
 
