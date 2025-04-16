@@ -14,7 +14,7 @@ A lightweight, ORM-free SQL query builder for Go. Designed for simplicity and co
 ## Installation
 
 ```bash
-go get github.com/MattConce/goqueryx/builder
+go get github.com/MattConce/goqueryx/queryx
 ```
 
 ## Usage with sqlx (Recommended)
@@ -28,7 +28,7 @@ type User struct {
 
 db := sqlx.MustConnect("mysql", "<username>:<password>@tcp(<host>:3306)/<dbname>")
 
-qb := builder.New().
+qb := queryx.NewQuery().
     Select("id", "name").
     From("users").
     Where("active = ?", []any{true})
@@ -48,7 +48,7 @@ if err != nil {
 ## Basic Usage
 
 ```go
-qb := builder.New().
+qb := queryx.NewQuery().
 Select("id", "email").
 From("users").
 Where("created_at > ?", []any{"2024-01-01"}).

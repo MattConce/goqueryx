@@ -1,4 +1,4 @@
-package builder
+package queryx
 
 import (
 	"reflect"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestQueryBuilder_Build_Success(t *testing.T) {
-	qb := New().
+	qb := NewQuery().
 		Select("id", "name", "email").
 		From("users").
 		Where("id = ?", []any{1}).
@@ -29,7 +29,7 @@ func TestQueryBuilder_Build_Success(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_MissingSelect(t *testing.T) {
-	qb := New().From("users")
+	qb := NewQuery().From("users")
 	_, _, err := qb.Build()
 	if err == nil {
 		t.Error("expected an error when select clause is missing, but got none")
@@ -37,7 +37,7 @@ func TestQueryBuilder_Build_MissingSelect(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_MissingFrom(t *testing.T) {
-	qb := New().Select("id", "name")
+	qb := NewQuery().Select("id", "name")
 	_, _, err := qb.Build()
 	if err == nil {
 		t.Error("expected an error when from clause is missing, but got none")
@@ -45,7 +45,7 @@ func TestQueryBuilder_Build_MissingFrom(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_NoWhere(t *testing.T) {
-	qb := New().Select("id", "name").From("users")
+	qb := NewQuery().Select("id", "name").From("users")
 	sql, args, err := qb.Build()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -62,7 +62,7 @@ func TestQueryBuilder_Build_NoWhere(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_Join(t *testing.T) {
-	qb := New().
+	qb := NewQuery().
 		Select("id", "name").
 		From("users").
 		Join("address", "users.id = address.user_id", nil)
@@ -83,7 +83,7 @@ func TestQueryBuilder_Build_Join(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_LeftJoin(t *testing.T) {
-	qb := New().
+	qb := NewQuery().
 		Select("id", "name").
 		From("users").
 		LeftJoin("address", "users.id = address.user_id", nil)
@@ -104,7 +104,7 @@ func TestQueryBuilder_Build_LeftJoin(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_OrderBy(t *testing.T) {
-	qb := New().Select("id", "name").From("users").OrderBy("name DESC", "id ASC")
+	qb := NewQuery().Select("id", "name").From("users").OrderBy("name DESC", "id ASC")
 	sql, args, err := qb.Build()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -121,7 +121,7 @@ func TestQueryBuilder_Build_OrderBy(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_Limit_Offset(t *testing.T) {
-	qb := New().
+	qb := NewQuery().
 		Select("id", "name", "email").
 		From("users").
 		Limit(10).
@@ -144,7 +144,7 @@ func TestQueryBuilder_Build_Limit_Offset(t *testing.T) {
 }
 
 func TestQueryBuilder_Build_GroupBy(t *testing.T) {
-	qb := New().Select("count(id) AS count", "name").From("users").GroupBy("name")
+	qb := NewQuery().Select("count(id) AS count", "name").From("users").GroupBy("name")
 	sql, args, err := qb.Build()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

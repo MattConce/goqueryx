@@ -1,20 +1,20 @@
-// Package builder provides a easy SQL query builder for constructing
+// Package queryx provides a easy SQL query builder for constructing
 // sql statements in a safe and idiomatic way.
 //
 // Example:
 //
-//	qb := builder.New().
+//	qb := queryx.NewQuery().
 //	    Select("id", "name").
 //	    From("users").
 //	    Where("age > ?", []any{18}).
 //	    Build()
-package builder
+package queryx
 
 import (
 	"errors"
 	"strings"
 
-	"github.com/MattConce/goqueryx/clauses"
+	"github.com/MattConce/goqueryx/queryx/clauses"
 )
 
 type QueryBuilder struct {
@@ -28,7 +28,7 @@ type QueryBuilder struct {
 	offsetClause  *clauses.Offset
 }
 
-func New() *QueryBuilder {
+func NewQuery() *QueryBuilder {
 	return &QueryBuilder{}
 }
 
