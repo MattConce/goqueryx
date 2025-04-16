@@ -26,7 +26,7 @@ type User struct {
     Name `db:"name"`
 }
 
-db := sqlx.MustConnect("mysql", "")
+db := sqlx.MustConnect("mysql", "<username>:<password>@tcp(<host>:3306)/<dbname>")
 
 qb := builder.New().
     Select("id", "name").
