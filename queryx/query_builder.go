@@ -12,15 +12,18 @@ package queryx
 
 import (
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/MattConce/goqueryx/queryx/clauses"
 )
 
 type QueryBuilder struct {
+	isCount       bool
 	selectClause  *clauses.Select
 	insertClause  *clauses.Insert
 	updateClause  *clauses.Update
+	deleteClause  *clauses.Delete
 	fromClause    *clauses.From
 	whereClause   []*clauses.Where
 	havingClause  []*clauses.Having
@@ -43,6 +46,20 @@ func (qb *QueryBuilder) Insert(table string, columns []string, values [][]any) *
 func (qb *QueryBuilder) Update(table string, columns []string, values []any, where string, whereArgs []any) *QueryBuilder {
 	qb.updateClause = clauses.NewUpdate(table, columns, values, where, whereArgs)
 	return qb
+}
+
+func (qb *QueryBuilder) Delete(table string, where string, whereArgs []any) *QueryBuilder {
+	qb.deleteClause = clauses.NewDelete(table, where, whereArgs)
+	return qb
+}
+
+func (qb *QueryBuilder) CountTotal() *QueryBuilder {
+	newQb := qb.cloneForCount()
+	newQb.isCount = true
+	newQb.orderByClause = nil
+	newQb.limitClause = nil
+	newQb.offsetClause = nil
+	return newQb
 }
 
 func (qb *QueryBuilder) Select(columns ...string) *QueryBuilder {
@@ -100,6 +117,19 @@ func (qb *QueryBuilder) Build() (string, []any, error) {
 	var args []any
 
 	switch {
+	case qb.isCount:
+		if qb.groupByClause != nil && len(qb.groupByClause.Columns) > 0 {
+			sqlBuilder.WriteString("SELECT COUNT(*) FROM (SELECT 1")
+			buildFrom(qb, &sqlBuilder)
+			args = buildJoins(qb, &sqlBuilder, args)
+			args = buildWhere(qb, &sqlBuilder, args)
+			sqlBuilder.WriteString(") AS subquery")
+		} else {
+			sqlBuilder.WriteString("SELECT COUNT(*)")
+			buildFrom(qb, &sqlBuilder)
+			args = buildJoins(qb, &sqlBuilder, args)
+			args = buildWhere(qb, &sqlBuilder, args)
+		}
 	case qb.insertClause != nil:
 		if qb.insertClause.Table == "" {
 			return "", nil, errors.New("insert requires a table name")
@@ -124,6 +154,12 @@ func (qb *QueryBuilder) Build() (string, []any, error) {
 		}
 		args = buildUpdate(qb, &sqlBuilder, args)
 
+	case qb.deleteClause != nil:
+		if qb.deleteClause.Table == "" {
+			return "", nil, errors.New("delete requires a table name")
+		}
+		args = buildDelete(qb, &sqlBuilder, args)
+
 	case qb.selectClause != nil:
 		if len(qb.selectClause.Columns) == 0 {
 			return "", nil, errors.New("select clause requires columns")
@@ -146,4 +182,13 @@ func (qb *QueryBuilder) Build() (string, []any, error) {
 	}
 
 	return sqlBuilder.String(), args, nil
+}
+
+func (qb *QueryBuilder) cloneForCount() *QueryBuilder {
+	return &QueryBuilder{
+		fromClause:    qb.fromClause,
+		whereClause:   slices.Clone(qb.whereClause),
+		joinClause:    slices.Clone(qb.joinClause),
+		groupByClause: qb.groupByClause,
+	}
 }

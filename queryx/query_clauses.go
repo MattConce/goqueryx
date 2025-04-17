@@ -135,3 +135,14 @@ func buildUpdate(qb *QueryBuilder, b *strings.Builder, args []any) []any {
 	}
 	return args
 }
+
+func buildDelete(qb *QueryBuilder, b *strings.Builder, args []any) []any {
+	if qb.deleteClause != nil {
+		b.WriteString(fmt.Sprintf("DELETE FROM %s", qb.deleteClause.Table))
+		if qb.deleteClause.Where != "" {
+			b.WriteString(" WHERE " + qb.deleteClause.Where)
+			args = append(args, qb.deleteClause.WhereArgs...)
+		}
+	}
+	return args
+}

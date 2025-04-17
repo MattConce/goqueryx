@@ -55,6 +55,26 @@ func TestQueryBuilder_Build_Update(t *testing.T) {
 	}
 }
 
+func TestQueryBuilder_Build_Delete(t *testing.T) {
+
+	qb := NewQuery().Delete("users", "id = ?", []any{1})
+
+	sql, args, err := qb.Build()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedExpr := "DELETE FROM users WHERE id = ?"
+	expectedArgs := []any{1}
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
+	}
+}
+
 func TestQueryBuilder_Build_Select(t *testing.T) {
 	qb := NewQuery().Select("id", "name").From("users")
 	sql, args, err := qb.Build()
@@ -70,6 +90,51 @@ func TestQueryBuilder_Build_Select(t *testing.T) {
 	if len(args) != 0 {
 		t.Errorf("expected no args, got: %v", args)
 	}
+}
+
+func TestQueryBuilder_Build_CountTotal(t *testing.T) {
+	qb := NewQuery().
+		Select("id", "name").
+		From("users").
+		Where("age > ?", []any{18}).
+		OrderBy("name ASC").
+		Limit(10).
+		Offset(20)
+
+	expectedExpr := "SELECT COUNT(*) FROM users WHERE age > ?"
+	expectedArgs := []any{18}
+
+	sql, args, _ := qb.CountTotal().Build()
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
+	}
+
+}
+
+func TestQueryBuilder_Build_CountTotalWithGroupBy(t *testing.T) {
+	qb := NewQuery().
+		Select("users.name", "orders.total").
+		From("users").
+		Join("orders", "users.id = orders.user_id", nil).
+		Where("users.active = ?", []any{true}).
+		GroupBy("users.id")
+
+	expectedExpr := "SELECT COUNT(*) FROM (SELECT 1 FROM users INNER JOIN orders ON users.id = orders.user_id WHERE users.active = ?) AS subquery"
+	expectedArgs := []any{true}
+
+	sql, args, _ := qb.CountTotal().Build()
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
+	}
+
 }
 
 func TestQueryBuilder_Build_Join(t *testing.T) {
