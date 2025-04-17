@@ -61,7 +61,7 @@ sql, args, _ := qb.Build()
 
 ## TODO
 
-- Add support for INSERT/UPDATE/DELETE statements
+- Add support for DELETE statement
 
 - Support dialect-specific placeholders (e.g., $1 for PostgreSQL)
 
