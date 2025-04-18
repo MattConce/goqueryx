@@ -1,15 +1,11 @@
 package clauses
 
 type Delete struct {
-	Table     string
-	Where     string
-	WhereArgs []any
+	Table string
 }
 
-func NewDelete(table string, where string, whereArgs []any) *Delete {
+func NewDelete(table string) *Delete {
 	return &Delete{
-		Table:     table,
-		Where:     where,
-		WhereArgs: whereArgs,
+		Table: table,
 	}
 }

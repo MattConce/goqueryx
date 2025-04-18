@@ -19,37 +19,49 @@ import (
 )
 
 type QueryBuilder struct {
-	isCount       bool
-	selectClause  *clauses.Select
-	insertClause  *clauses.Insert
-	updateClause  *clauses.Update
-	deleteClause  *clauses.Delete
-	fromClause    *clauses.From
-	whereClause   []*clauses.Where
-	havingClause  []*clauses.Having
-	joinClause    []*clauses.Join
-	orderByClause *clauses.OrderBy
-	groupByClause *clauses.GroupBy
-	limitClause   *clauses.Limit
-	offsetClause  *clauses.Offset
+	isCount           bool
+	selectClause      *clauses.Select
+	insertClause      *clauses.Insert
+	updateClause      *clauses.Update
+	valuesClause      *clauses.Values
+	multiValuesClause *clauses.MultiValues
+	deleteClause      *clauses.Delete
+	fromClause        *clauses.From
+	whereClause       []*clauses.Where
+	havingClause      []*clauses.Having
+	joinClause        []*clauses.Join
+	orderByClause     *clauses.OrderBy
+	groupByClause     *clauses.GroupBy
+	limitClause       *clauses.Limit
+	offsetClause      *clauses.Offset
 }
 
 func NewQuery() *QueryBuilder {
 	return &QueryBuilder{}
 }
 
-func (qb *QueryBuilder) Insert(table string, columns []string, values [][]any) *QueryBuilder {
-	qb.insertClause = clauses.NewInsert(table, columns, values)
+func (qb *QueryBuilder) Insert(table string, columns []string) *QueryBuilder {
+	qb.insertClause = clauses.NewInsert(table, columns)
 	return qb
 }
 
-func (qb *QueryBuilder) Update(table string, columns []string, values []any, where string, whereArgs []any) *QueryBuilder {
-	qb.updateClause = clauses.NewUpdate(table, columns, values, where, whereArgs)
+func (qb *QueryBuilder) Update(table string, columns []string) *QueryBuilder {
+	qb.updateClause = clauses.NewUpdate(table, columns)
 	return qb
 }
 
-func (qb *QueryBuilder) Delete(table string, where string, whereArgs []any) *QueryBuilder {
-	qb.deleteClause = clauses.NewDelete(table, where, whereArgs)
+func (qb *QueryBuilder) Values(values ...any) *QueryBuilder {
+	qb.valuesClause = clauses.NewValues(values)
+	return qb
+}
+
+func (qb *QueryBuilder) MultiValues(values [][]any) *QueryBuilder {
+	qb.multiValuesClause = clauses.NewMultiValues(values)
+	return qb
+}
+
+func (qb *QueryBuilder) Delete(table string) *QueryBuilder {
+	qb.deleteClause = clauses.NewDelete(table)
 	return qb
 }
 
@@ -137,10 +149,15 @@ func (qb *QueryBuilder) Build() (string, []any, error) {
 		if len(qb.insertClause.Columns) == 0 {
 			return "", nil, errors.New("insert requires columns")
 		}
-		if len(qb.insertClause.Values) == 0 {
-			return "", nil, errors.New("insert requires values")
+		if qb.valuesClause == nil && qb.multiValuesClause == nil {
+			return "", nil, errors.New("insert requires values or multi-values")
 		}
 		args = buildInsert(qb, &sqlBuilder, args)
+		if qb.multiValuesClause != nil {
+			args = buildMultiValues(qb, &sqlBuilder, args)
+		} else {
+			args = buildValues(qb, &sqlBuilder, args)
+		}
 
 	case qb.updateClause != nil:
 		if qb.updateClause.Table == "" {
@@ -149,16 +166,26 @@ func (qb *QueryBuilder) Build() (string, []any, error) {
 		if len(qb.updateClause.Columns) == 0 {
 			return "", nil, errors.New("update requires columns")
 		}
-		if len(qb.updateClause.Values) != len(qb.updateClause.Columns) {
+		if qb.valuesClause == nil {
+			return "", nil, errors.New("update requires values")
+		}
+		if len(qb.valuesClause.Args) != len(qb.updateClause.Columns) {
 			return "", nil, errors.New("number of values must match columns in update")
 		}
 		args = buildUpdate(qb, &sqlBuilder, args)
+		args = append(args, qb.valuesClause.Args...)
+		args = buildWhere(qb, &sqlBuilder, args)
 
 	case qb.deleteClause != nil:
 		if qb.deleteClause.Table == "" {
 			return "", nil, errors.New("delete requires a table name")
 		}
 		args = buildDelete(qb, &sqlBuilder, args)
+
+		if len(qb.whereClause) == 0 {
+			return "", nil, errors.New("delete requires where condition")
+		}
+		args = buildWhere(qb, &sqlBuilder, args)
 
 	case qb.selectClause != nil:
 		if len(qb.selectClause.Columns) == 0 {

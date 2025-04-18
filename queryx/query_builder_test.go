@@ -8,10 +8,32 @@ import (
 func TestQueryBuilder_Build_Insert(t *testing.T) {
 
 	qb := NewQuery().
-		Insert("users", []string{"name", "email"}, [][]any{
-			{"John", "john@example.com"},
-			{"Jane", "jane@example.com"},
-		})
+		Insert("users", []string{"name", "email"}).
+		Values("John", "john@example.com")
+
+	sql, args, err := qb.Build()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedExpr := "INSERT INTO users (name, email) VALUES (?, ?)"
+	expectedArgs := []any{"John", "john@example.com"}
+
+	if sql != expectedExpr {
+		t.Errorf("expected SQL:\n%s\ngot:\n%s", expectedExpr, sql)
+	}
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("expected args: %v, got: %v", expectedArgs, args)
+	}
+}
+
+func TestQueryBuilder_Build_Multi_Insert(t *testing.T) {
+
+	qb := NewQuery().
+		Insert("users", []string{"name", "email"}).MultiValues([][]any{
+		{"John", "john@example.com"},
+		{"Jane", "jane@example.com"},
+	})
 
 	sql, args, err := qb.Build()
 	if err != nil {
@@ -32,12 +54,9 @@ func TestQueryBuilder_Build_Insert(t *testing.T) {
 func TestQueryBuilder_Build_Update(t *testing.T) {
 
 	qb := NewQuery().
-		Update("users",
-			[]string{"name", "status"},
-			[]any{"John Doe", "inactive"},
-			"id = ? AND active = ?",
-			[]any{123, true},
-		)
+		Update("users", []string{"name", "status"}).
+		Values("John Doe", "inactive").
+		Where("id = ? AND active = ?", []any{123, true})
 
 	sql, args, err := qb.Build()
 	if err != nil {
@@ -57,7 +76,7 @@ func TestQueryBuilder_Build_Update(t *testing.T) {
 
 func TestQueryBuilder_Build_Delete(t *testing.T) {
 
-	qb := NewQuery().Delete("users", "id = ?", []any{1})
+	qb := NewQuery().Delete("users").Where("id = ?", []any{1})
 
 	sql, args, err := qb.Build()
 	if err != nil {

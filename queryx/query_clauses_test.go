@@ -28,22 +28,16 @@ func TestBuildInsert(t *testing.T) {
 		insertClause: &clauses.Insert{
 			Table:   "users",
 			Columns: []string{"name", "email"},
-			Values:  [][]any{{"Jane", "jane@example.com"}},
 		},
 	}
 
 	var sql strings.Builder
 	var args []any
-	args = buildInsert(qb, &sql, args)
+	_ = buildInsert(qb, &sql, args)
 
-	expectedSQL := "INSERT INTO users (name, email) VALUES (?, ?)"
+	expectedSQL := "INSERT INTO users (name, email)"
 	if sql.String() != expectedSQL {
 		t.Errorf("\nSQL expected: %q\ngot: %q", expectedSQL, sql.String())
-	}
-
-	expectedArgs := []any{"Jane", "jane@example.com"}
-	if !reflect.DeepEqual(args, expectedArgs) {
-		t.Errorf("\nArgs expected: %v\ngot: %v", expectedArgs, args)
 	}
 }
 
@@ -52,69 +46,48 @@ func TestBuildBulkInsert(t *testing.T) {
 		insertClause: &clauses.Insert{
 			Table:   "users",
 			Columns: []string{"name", "email"},
-			Values: [][]any{
-				{"John", "john@example.com"},
-				{"Jane", "jane@example.com"},
-			},
 		},
 	}
 
 	var sql strings.Builder
 	var args []any
-	args = buildInsert(qb, &sql, args)
+	_ = buildInsert(qb, &sql, args)
 
-	expectedSQL := "INSERT INTO users (name, email) VALUES (?, ?), (?, ?)"
+	expectedSQL := "INSERT INTO users (name, email)"
 	if sql.String() != expectedSQL {
 		t.Errorf("\nSQL expected: %q\ngot: %q", expectedSQL, sql.String())
-	}
-
-	expectedArgs := []any{
-		"John", "john@example.com",
-		"Jane", "jane@example.com",
-	}
-	if !reflect.DeepEqual(args, expectedArgs) {
-		t.Errorf("\nArgs expected: %v\ngot: %v", expectedArgs, args)
 	}
 }
 
 func TestBuildUpdate(t *testing.T) {
 	qb := &QueryBuilder{
 		updateClause: &clauses.Update{
-			Table:     "users",
-			Columns:   []string{"name", "email"},
-			Values:    []any{"Jane", "jane@example.com"},
-			Where:     "user.id = ?",
-			WhereArgs: []any{1},
+			Table:   "users",
+			Columns: []string{"name", "email"},
 		},
 	}
 
 	var sql strings.Builder
 	var args []any
-	expectedArgs := []any{
-		"Jane", "jane@example.com", 1,
-	}
-	args = buildUpdate(qb, &sql, args)
+	_ = buildUpdate(qb, &sql, args)
 
-	expectedExpr := "UPDATE users SET name = ?, email = ? WHERE user.id = ?"
+	expectedExpr := "UPDATE users SET name = ?, email = ?"
 
 	if sql.String() != expectedExpr {
 		t.Errorf("\nexpected: %q\ngot: %q", expectedExpr, sql.String())
-	}
-	if !reflect.DeepEqual(args, expectedArgs) {
-		t.Errorf("\nArgs expected: %v\ngot: %v", expectedArgs, args)
 	}
 }
 
 func TestBuildDelete(t *testing.T) {
 	qb := &QueryBuilder{
-		deleteClause: &clauses.Delete{Table: "users", Where: "name = ?", WhereArgs: []any{"Jane"}},
+		deleteClause: &clauses.Delete{Table: "users"},
 	}
 
 	var sql strings.Builder
 	var args []any
 	buildDelete(qb, &sql, args)
 
-	expected := "DELETE FROM users WHERE name = ?"
+	expected := "DELETE FROM users"
 	if sql.String() != expected {
 		t.Errorf("\nexpected: %q\ngot: %q", expected, sql.String())
 	}

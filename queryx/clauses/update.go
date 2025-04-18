@@ -1,19 +1,13 @@
 package clauses
 
 type Update struct {
-	Table     string
-	Columns   []string
-	Values    []any
-	Where     string
-	WhereArgs []any
+	Table   string
+	Columns []string
 }
 
-func NewUpdate(table string, columns []string, values []any, where string, whereArgs []any) *Update {
+func NewUpdate(table string, columns []string) *Update {
 	return &Update{
-		Table:     table,
-		Columns:   columns,
-		Values:    values,
-		Where:     where,
-		WhereArgs: whereArgs,
+		Table:   table,
+		Columns: columns,
 	}
 }
